@@ -135,6 +135,22 @@ h2 em{font:400 .9em "Alex Brush",cursive;color:var(--lime);text-transform:none}
 .tog.on{color:var(--lime);border-color:rgba(199,230,46,.4)}
 .tog.on .sw{background:var(--lime)} .tog.on .sw:after{transform:translateX(12px);background:var(--ink)}
 
+/* zona */
+.zones{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+.zone{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;border:1px solid var(--line);border-radius:12px;padding:8px 12px;color:var(--paper-dim);transition:border-color 160ms ease,color 160ms ease,background-color 160ms ease,transform 160ms var(--ease-out)}
+.zone:active{transform:scale(.97)}
+.zone.on{border-color:var(--coral);color:var(--coral);background:rgba(240,137,126,.07)}
+.plan{margin-top:10px;border:1px solid var(--line-2);border-radius:var(--r);background:linear-gradient(135deg,rgba(199,230,46,.05),rgba(240,137,126,.04));padding:13px}
+.plan .tip{font-size:13px;color:var(--paper);margin:0 0 10px}
+.plan .tip b{color:var(--lime)}
+.plan ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.plan li button{display:grid;grid-template-columns:22px 1fr auto;gap:9px;align-items:center;width:100%;text-align:left;padding:8px 10px;border-radius:11px;background:var(--s1);border:1px solid var(--line-2);font-size:13px;transition:border-color 160ms ease,transform 160ms var(--ease-out)}
+.plan li button:active{transform:scale(.98)}
+.plan li button.on{border-color:var(--lime)}
+.plan .num{font:400 15px Anton;color:var(--coral)}
+.plan .what{font-size:11.5px;color:var(--paper-dim);display:block;margin-top:1px}
+.plan .cnt{font-size:11.5px;color:var(--lime);font-weight:600;white-space:nowrap}
+
 /* cards */
 .list{display:flex;flex-direction:column;gap:9px}
 .biz{background:var(--s1);border:1px solid var(--line-2);border-radius:var(--r);overflow:hidden;transition:border-color 200ms ease,box-shadow 200ms ease}
@@ -259,6 +275,8 @@ footer .sig{display:block;font:400 34px "Alex Brush",cursive;color:var(--lime);m
   <section class="sec">
     <h2>¿A quién le <em>vendes</em> hoy?</h2>
     <div class="where" id="where"></div>
+    <div class="zones" id="zones"></div>
+    <div class="plan" id="plan" hidden></div>
     <div class="scroller" id="cats"></div>
     <div class="tabs" id="tabs"></div>
     <div class="bar">
@@ -360,6 +378,7 @@ const DEFAULT_SVC={
   matricula:{n:"Matrícula y pagos online",d:"Inscripciones y cobros sin papeleo",min:600,max:1500,mes:35,tag:"Matrícula"},
   tienda:{n:"Tienda online",d:"Vende también fuera del horario",min:1200,max:3000,mes:30,tag:"Tienda"},
   catalogoWA:{n:"Catálogo y pedidos por WhatsApp",d:"Pedidos directos desde el móvil",min:300,max:700,mes:29,tag:"Pedidos"},
+  chatIdiomas:{n:"Chatbot multilingüe (web + WhatsApp)",d:"Contesta a turistas en inglés, alemán, francés…",min:400,max:1000,mes:50,tag:"Idiomas"},
   contenido:{n:"Pack de reels para redes",d:"Vídeos editados para Instagram y TikTok",min:250,max:600,mes:0,tag:"Reels"}
 };
 const CATS={
@@ -380,6 +399,17 @@ const CATS={
 const WS={none:{l:"Sin web",c:"",base:45},broken:{l:"Su web no carga",c:"",base:45},bad:{l:"Web anticuada",c:"mid",base:30},unchecked:{l:"Tiene web · revisar",c:"mid",base:15},ok:{l:"Web correcta",c:"ok",base:5}};
 const ST={new:"Por contactar",contacted:"Contactado",interested:"Interesado",client:"Cliente",lost:"Descartado"};
 const TICK={HIGH:20,MEDIUM:12,LOW:6};
+const ZONES={
+  pueblo:{n:"Pueblo o interior",i:"🌾",tip:"Aquí <b>casi nadie tiene web</b>: vende web sencilla, ficha de Google y WhatsApp.",
+    order:["rest","bar","pelu","taller","shop","clin","gym","vet","ases","acad","inmo","hotel","otros"],bonus:{rest:10,bar:8,pelu:8,taller:8,shop:5},
+    what:{rest:"Web + reservas + WhatsApp",bar:"Web + carta QR + reseñas",pelu:"Web + citas online",taller:"Web + presupuestos por WhatsApp",shop:"Web + catálogo por WhatsApp"}},
+  ciudad:{n:"Ciudad grande",i:"🏙️",tip:"La mayoría <b>ya tiene web</b>: vende chatbot, citas online y recordatorios.",
+    order:["clin","pelu","gym","vet","rest","inmo","ases","acad","taller","hotel","bar","shop","otros"],bonus:{clin:12,pelu:9,gym:6,vet:6,inmo:5},webBonus:15,
+    what:{clin:"Chatbot de citas + recordatorios",pelu:"Citas online + recordatorios",gym:"App de socios + WhatsApp IA",vet:"Citas + recordatorios de vacunas",rest:"Agente de reservas por WhatsApp",inmo:"Agente IA de captación"}},
+  costa:{n:"Costa o turística",i:"🏖️",tip:"Muchos turistas escriben <b>en otros idiomas</b>: vende reservas y chatbot multilingüe.",
+    order:["rest","hotel","bar","pelu","clin","inmo","shop","gym","taller","ases","vet","acad","otros"],bonus:{rest:12,hotel:12,bar:8,inmo:5},
+    what:{rest:"Reservas + chatbot en idiomas",hotel:"Reservas directas + chatbot en idiomas",bar:"Carta QR en idiomas + reseñas",pelu:"Citas online",clin:"Citas + chatbot",inmo:"Catálogo + leads de extranjeros"}}
+};
 
 /* ===== estado ===== */
 const LS="sbm_radar_v2";
@@ -389,7 +419,9 @@ const save=()=>{try{localStorage.setItem(LS,JSON.stringify(store));}catch(e){}};
 let SVC=JSON.parse(JSON.stringify(DEFAULT_SVC));
 if(store.prices)for(const k in store.prices)if(SVC[k])Object.assign(SVC[k],store.prices[k]);
 let city=null,list=[],isDemo=false,liveOK=!!store.live;
-const ui={cat:"all",st:"all",sort:"score",phone:false,q:"",open:null};
+const ui={cat:"all",st:"all",sort:"score",phone:false,q:"",open:null,zone:"pueblo"};
+store.zones=store.zones||{};
+function pickZone(){ui.zone=(city&&store.zones[city])||(list.length>=600?"ciudad":"pueblo");}
 
 /* ===== clasificación y lectura de datos ===== */
 function classifyTags(t){
@@ -473,6 +505,7 @@ function services(b){
   else if(b.ws==="broken")ids.push("webRehacer","rebranding");
   else if(b.ws==="bad")ids.push("webRehacer");
   CATS[b.cat].s.forEach(s=>{if(!ids.includes(s))ids.push(s);});
+  if(ui.zone==="costa"&&["rest","bar","hotel"].includes(b.cat))ids.splice(Math.min(ids.length,ids[0]==="webNueva"||ids[0]==="webRehacer"?2:0),0,"chatIdiomas");
   return ids;
 }
 function value(b){
@@ -480,7 +513,7 @@ function value(b){
   services(b).forEach(id=>{if(b.off.includes(id))return;const s=SVC[id];min+=s.min;max+=s.max;mes+=s.mes;});
   return{min,max,mid:(min+max)/2,mes};
 }
-function score(b,v){return Math.min(100,Math.round(WS[b.ws].base+(b.phone?15:0)+TICK[CATS[b.cat].t]+Math.min(20,v.mid/400)));}
+function score(b,v){const z=ZONES[ui.zone];const wb=(z.webBonus&&(b.ws==="unchecked"||b.ws==="ok"))?z.webBonus:0;const raw=WS[b.ws].base+wb+(b.phone?15:0)+TICK[CATS[b.cat].t]+(z.bonus[b.cat]||0)+Math.min(20,v.mid/400);return Math.min(99,Math.round(raw*100/125));}
 const bucketCol=v=>v>=3500?"#c7e62e":v>=1500?"#d8b98c":"#6b6960";
 const scoreCol=s=>s>=70?"var(--lime)":s>=45?"var(--tan)":"var(--muted)";
 const svcPrice=s=>{const a=(s.min||s.max)?(s.min===s.max?eur(s.min):fmt(s.min)+" – "+eur(s.max)):"";return a?a+(s.mes?`<small>+ ${s.mes} €/mes</small>`:""):s.mes+" €/mes";};
@@ -517,7 +550,7 @@ function renderKPIs(){
 function renderCats(){
   const cnt={};list.forEach(b=>cnt[b.cat]=(cnt[b.cat]||0)+1);
   let h=`<button class="chip ${ui.cat==="all"?"on":""}" data-cat="all">🌴 Todos <b>${list.length}</b></button>`;
-  Object.keys(CATS).filter(k=>cnt[k]).sort((a,b)=>cnt[b]-cnt[a]).forEach(k=>{const c=CATS[k];
+  const ord=ZONES[ui.zone].order;Object.keys(CATS).filter(k=>cnt[k]).sort((a,b)=>ord.indexOf(a)-ord.indexOf(b)).forEach(k=>{const c=CATS[k];
     h+=`<button class="chip ${ui.cat===k?"on":""}" data-cat="${k}" title="Ticket ${c.t.toLowerCase()}"><i class="tkd ${c.t}"></i>${c.i} ${esc(c.n)} <b>${cnt[k]}</b></button>`;});
   $("#cats").innerHTML=h;
   const sc={all:list.length};Object.keys(ST).forEach(k=>sc[k]=list.filter(b=>b.st===k).length);
@@ -568,7 +601,18 @@ function renderWhere(){$("#where").innerHTML=city?`📍 <b>${esc(city)}</b> · $
 function renderSaved(){
   $("#saved").innerHTML=Object.keys(store.cities).map(n=>`<button data-city="${esc(n)}" class="${n===city&&!isDemo?"on":""}">📍 ${esc(n)} · ${store.cities[n].list.length}</button>`).join("");
 }
-function renderAll(){renderKPIs();renderWhere();renderCats();renderList();renderSaved();$("#demoBanner").hidden=!isDemo;}
+function renderZone(){
+  $("#zones").innerHTML=Object.entries(ZONES).map(([k,z])=>`<button class="zone ${ui.zone===k?"on":""}" data-zone="${k}">${z.i} ${z.n}</button>`).join("");
+  const z=ZONES[ui.zone],plan=$("#plan");
+  if(!list.length){plan.hidden=true;return;}
+  const L=enrich(list.slice());
+  const top=z.order.filter(k=>L.some(b=>b.cat===k)).slice(0,3);
+  plan.hidden=false;
+  plan.innerHTML=`<p class="tip">${z.tip}</p><ol>${top.map((k,i)=>{const of=L.filter(b=>b.cat===k);const hot=of.filter(b=>b.ws==="none"||b.ws==="broken").length;
+    const cntTxt=ui.zone==="ciudad"?of.length+" negocios":hot+" sin web";
+    return `<li><button data-plan="${k}" class="${ui.cat===k?"on":""}"><span class="num">${i+1}</span><span>${CATS[k].i} <b>${esc(CATS[k].n)}</b><span class="what">${esc(z.what[k]||"Web + WhatsApp con IA")}</span></span><span class="cnt">${cntTxt}</span></button></li>`;}).join("")}</ol>`;
+}
+function renderAll(){renderZone();renderKPIs();renderWhere();renderCats();renderList();renderSaved();$("#demoBanner").hidden=!isDemo;}
 
 /* ===== mapa ===== */
 let lmap=null,llayer=null;
@@ -644,7 +688,7 @@ async function liveSearch(name){
   throw err||new Error("overpass");
 }
 const findKey=n=>Object.keys(store.cities).find(k=>k.toLowerCase()===n.toLowerCase());
-function loadSaved(k){city=k;list=store.cities[k].list.map(mkBiz);isDemo=false;ui.cat="all";ui.st="all";ui.open=null;store.current=k;save();renderAll();}
+function loadSaved(k){city=k;list=store.cities[k].list.map(mkBiz);pickZone();isDemo=false;ui.cat="all";ui.st="all";ui.open=null;store.current=k;save();renderAll();}
 async function scan(n){
   if(busy)return;
   const wait=COOLDOWN-(Date.now()-lastScan);if(wait>0){toast("Espera "+Math.ceil(wait/1000)+" s antes de volver a escanear");return;}
@@ -655,7 +699,7 @@ async function scan(n){
     const key=findKey(n),old=key?store.cities[key].list:[],prev=new Map(old.map(b=>[b.id,b]));
     found.forEach(b=>{const o=prev.get(b.id);if(o){b.ws=o.ws;b.off=o.off||[];b.st=o.st||"new";b.note=o.note||"";}});
     const manual=old.filter(b=>!/^(node|way|relation)\//.test(b.id));
-    city=key||n;list=found.concat(manual.map(mkBiz));isDemo=false;ui.cat="all";ui.st="all";ui.open=null;
+    city=key||n;list=found.concat(manual.map(mkBiz));pickZone();isDemo=false;ui.cat="all";ui.st="all";ui.open=null;
     me.classList.remove("loading");persist();renderAll();
     toast(found.length?found.length+" negocios en "+city:"No hay negocios en el mapa de "+city);
   }catch(e){
@@ -687,7 +731,7 @@ async function handleFiles(files){
   const base=(!isDemo&&city===target)?list:(store.cities[target]?store.cities[target].list.map(mkBiz):[]);
   const key=b=>b.name.toLowerCase()+"|"+(b.lat?b.lat.toFixed(4):"");const seen=new Set(base.map(key));
   const fresh=added.filter(b=>{const k=key(b);if(seen.has(k))return false;seen.add(k);return true;});
-  city=target;list=base.concat(fresh);isDemo=false;ui.cat="all";ui.st="all";ui.open=null;
+  city=target;list=base.concat(fresh);pickZone();isDemo=false;ui.cat="all";ui.st="all";ui.open=null;
   persist();hide("#ovImport");renderAll();toast(fresh.length+" negocios cargados en "+city);
 }
 
@@ -739,7 +783,9 @@ drop.addEventListener("drop",e=>handleFiles([...e.dataTransfer.files]));
 document.querySelectorAll(".ov").forEach(o=>o.addEventListener("click",e=>{if(e.target===o||e.target.closest("[data-close]"))o.classList.remove("show");}));
 document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".ov.show").forEach(o=>o.classList.remove("show"));});
 
-$("#cats").addEventListener("click",e=>{const c=e.target.closest("[data-cat]");if(!c)return;ui.cat=c.dataset.cat;ui.open=null;renderCats();renderList();});
+$("#zones").addEventListener("click",e=>{const z=e.target.closest("[data-zone]");if(!z)return;ui.zone=z.dataset.zone;if(city&&!isDemo){store.zones[city]=ui.zone;save();}ui.cat="all";ui.open=null;renderAll();});
+$("#plan").addEventListener("click",e=>{const b=e.target.closest("[data-plan]");if(!b)return;ui.cat=ui.cat===b.dataset.plan?"all":b.dataset.plan;ui.open=null;ui.sort="score";$("#sort").value="score";renderZone();renderCats();renderList();$("#list").scrollIntoView({behavior:"smooth",block:"start"});});
+$("#cats").addEventListener("click",e=>{const c=e.target.closest("[data-cat]");if(!c)return;ui.cat=c.dataset.cat;ui.open=null;renderZone();renderCats();renderList();});
 $("#tabs").addEventListener("click",e=>{const c=e.target.closest("[data-st]");if(!c)return;ui.st=c.dataset.st;ui.open=null;renderCats();renderList();});
 $("#sort").addEventListener("change",e=>{ui.sort=e.target.value;renderList();});
 $("#tPhone").addEventListener("click",function(){ui.phone=!ui.phone;this.classList.toggle("on",ui.phone);renderList();});
@@ -775,7 +821,7 @@ let rz;window.addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(()=>
 /* ===== arranque ===== */
 if(store.current&&store.cities[store.current]){city=store.current;list=store.cities[city].list.map(mkBiz);$("#cityInput").value=city;}
 else{city="Guadalajara (ejemplo)";list=demo();isDemo=true;}
-renderAll();
+pickZone();renderAll();
 })();
 </script>
 </body>
