@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Radar de clientes · SoyBrainMonkey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#06110B; --bg2:#0A1A11; --card:#0E2016; --card2:#132A1D; --line:#1E3B2A; --line2:#2A5139;
+  --lime:#C8FF3A; --lime-d:#9BD40F; --banana:#FFD447; --orange:#FF9A3C; --red:#FF6464;
+  --text:#EEF7EA; --muted:#8FAA98; --dim:#5E7A68;
+  --r:16px;
+}
+[hidden]{display:none!important}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.4}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background:
+    radial-gradient(900px 500px at 50% -120px, rgba(200,255,58,.13), transparent 60%),
+    radial-gradient(600px 400px at 110% 30%, rgba(255,212,71,.05), transparent 60%),
+    var(--bg);
+  min-height:100vh}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+a{color:inherit}
+.wrap{max-width:760px;margin:0 auto;padding:18px 16px 60px}
+
+/* header */
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:9px;font-family:"Bricolage Grotesque",Inter,system-ui,sans-serif;font-weight:800;font-size:17px;letter-spacing:-.01em}
+.brand .logo{width:34px;height:34px;border-radius:11px;background:var(--lime);display:grid;place-items:center;font-size:19px;box-shadow:0 0 22px rgba(200,255,58,.45)}
+.brand small{display:block;font-family:Inter;font-weight:600;font-size:11px;color:var(--lime);letter-spacing:.08em;text-transform:uppercase}
+.iconbtn{white-space:nowrap;height:36px;padding:0 12px;border-radius:11px;border:1px solid var(--line2);background:var(--card);font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+
+/* hero */
+.pill{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line2);background:rgba(200,255,58,.06);color:var(--lime);font:500 11px "JetBrains Mono";letter-spacing:.06em;text-transform:uppercase;padding:6px 11px;border-radius:999px}
+.pill i{width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime)}
+h1{font-family:"Bricolage Grotesque",Inter,system-ui,sans-serif;font-weight:800;font-size:clamp(36px,10vw,58px);line-height:.95;letter-spacing:-.035em;margin:14px 0 12px;text-align:center}
+h1 span{color:var(--lime);text-shadow:0 0 18px rgba(200,255,58,.55),0 0 2px rgba(200,255,58,.9)}
+.sub{color:var(--muted);text-align:center;max-width:470px;margin:0 auto 20px;font-size:15px}
+.sub b{color:var(--red);font-weight:600}
+.hero{text-align:center}
+
+.search{display:flex;gap:8px;padding:6px;border:1px solid var(--line2);border-radius:18px;background:var(--bg2);box-shadow:0 0 0 4px rgba(200,255,58,.04)}
+.search .in{flex:1;display:flex;align-items:center;gap:8px;background:#F4FBEF;color:#0B1A11;border-radius:13px;padding:0 13px;min-width:0}
+.search input{border:0;outline:0;background:none;width:100%;height:46px;color:#0B1A11;font-weight:600;font-size:16px}
+.btn{height:46px;padding:0 18px;border-radius:13px;background:var(--lime);color:#0B1A11;font-weight:700;box-shadow:0 0 18px rgba(200,255,58,.35);white-space:nowrap}
+.btn:active{transform:scale(.97)}
+.btn.ghost{background:var(--card2);color:var(--text);box-shadow:none;border:1px solid var(--line2)}
+.btn.sm{height:36px;padding:0 13px;border-radius:11px;font-size:13px}
+
+/* map */
+.mapbox{position:relative;margin-top:14px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:#071309}
+#map{display:block;width:100%;height:270px}
+.legend{position:absolute;left:10px;bottom:9px;display:flex;gap:10px;font-size:11px;color:var(--muted);background:rgba(6,17,11,.8);padding:5px 9px;border-radius:9px;backdrop-filter:blur(4px)}
+.legend span{display:flex;align-items:center;gap:5px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.maptag{position:absolute;right:10px;bottom:9px;font-size:10px;color:var(--dim)}
+#lmap{background:#071309}
+.leaflet-container{background:#071309;font-family:Inter}
+.leaflet-control-zoom a{background:var(--card)!important;color:var(--text)!important;border-color:var(--line2)!important}
+.leaflet-control-attribution{background:rgba(6,17,11,.7)!important;color:var(--dim)!important;font-size:9px}
+.leaflet-control-attribution a{color:var(--muted)!important}
+.mapempty.loading{color:var(--lime);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.4}}
+.mapempty{z-index:500;position:absolute;inset:0;display:grid;place-items:center;color:var(--dim);font:500 12px "JetBrains Mono";text-align:center;padding:20px}
+
+/* banner */
+.banner{margin-top:14px;border:1px dashed var(--banana);background:rgba(255,212,71,.06);color:var(--banana);border-radius:13px;padding:10px 12px;font-size:13px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.banner button{color:var(--bg);background:var(--banana);font-weight:700;border-radius:9px;padding:7px 11px;font-size:12px;white-space:nowrap}
+
+/* section */
+h2{font-family:"Bricolage Grotesque",Inter,system-ui,sans-serif;font-weight:800;font-size:22px;letter-spacing:-.02em;line-height:1.1;margin:26px 0 12px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.citychip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);background:var(--card);border-radius:10px;padding:7px 11px;font-size:13px;font-weight:600;color:var(--lime)}
+.citychip u{text-decoration:none;color:var(--muted);font-weight:500}
+.counts{font-size:12px;color:var(--muted)}
+.counts b{color:var(--text)}
+
+.cats{display:grid;grid-template-rows:repeat(2,auto);grid-auto-flow:column;grid-auto-columns:96px;gap:8px;overflow-x:auto;padding:12px 2px 6px;scrollbar-width:none;scroll-snap-type:x proximity}
+.cats::-webkit-scrollbar{display:none}
+.cat{scroll-snap-align:start;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:9px 6px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:96px}
+.cat .ic{font-size:20px;line-height:1.1}
+.cat .nm{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.cat .ct{font-weight:700;font-size:15px}
+.cat.on{border-color:var(--lime);background:rgba(200,255,58,.07);box-shadow:inset 0 0 0 1px var(--lime),0 0 14px rgba(200,255,58,.15)}
+.tk{font:600 8.5px Inter;letter-spacing:.06em;padding:2px 6px;border-radius:5px;margin-top:2px}
+.tk.LOW{background:#1B3324;color:#A9C7B3}
+.tk.MEDIUM{background:rgba(255,154,60,.18);color:var(--orange)}
+.tk.HIGH{background:rgba(200,255,58,.16);color:var(--lime)}
+
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 12px;font-size:12.5px;color:var(--muted)}
+.tool{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:var(--card)}
+.tool.on{color:var(--lime);border-color:var(--line2)}
+.sw{width:30px;height:18px;border-radius:9px;background:var(--line2);position:relative;transition:.2s}
+.sw:after{content:"";position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.2s}
+.tool.on .sw{background:var(--lime)}
+.tool.on .sw:after{left:14px;background:#0B1A11}
+.filter{flex:1;min-width:140px;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:0 10px;height:34px;outline:0;font-size:13px}
+
+/* cards */
+.list{display:flex;flex-direction:column;gap:10px}
+.biz{border:1px solid var(--line);background:linear-gradient(180deg,var(--card),#0C1C13);border-radius:var(--r);overflow:hidden;transition:border-color .2s}
+.biz.open{border-color:var(--line2)}
+.biz.flash{border-color:var(--lime);box-shadow:0 0 0 1px var(--lime),0 0 22px rgba(200,255,58,.25)}
+.bh{display:flex;gap:10px;padding:13px 13px 12px;align-items:flex-start;width:100%;text-align:left}
+.bl{flex:1;min-width:0}
+.bn{font-family:"Bricolage Grotesque",Inter,system-ui,sans-serif;font-weight:700;font-size:17px;letter-spacing:-.01em;line-height:1.15}
+.bm{font-size:12.5px;color:var(--muted);margin-top:3px}
+.bm .p{color:var(--red)}
+.bm .p.ok{color:var(--lime-d)}
+.bm .p.warn{color:var(--orange)}
+.chips{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.chip{font-size:11px;background:var(--card2);border:1px solid var(--line);border-radius:7px;padding:3px 7px;color:#CFE3D4}
+.br{text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.prio{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px}
+.prio.Alta{background:rgba(255,154,60,.18);color:var(--orange)}
+.prio.Media{background:rgba(255,212,71,.12);color:var(--banana)}
+.prio.Baja{background:#1B3324;color:var(--muted)}
+.val{font-family:"Bricolage Grotesque",Inter,system-ui,sans-serif;font-weight:800;font-size:21px;color:var(--lime);letter-spacing:-.02em;line-height:1}
+.val small{font:500 10.5px Inter;color:var(--muted);margin-right:4px}
+.mes{font-size:11px;color:var(--muted)}
+.ph{width:24px;height:24px;border-radius:7px;border:1px solid var(--lime-d);color:var(--lime);display:grid;place-items:center;font-size:12px}
+.ph.no{border-color:var(--line2);color:var(--dim)}
+.chev{color:var(--muted);font-size:13px;transition:.2s;margin-top:4px}
+.biz.open .chev{transform:rotate(180deg)}
+
+.bd{display:none;border-top:1px solid var(--line);padding:12px 13px 14px}
+.biz.open .bd{display:block}
+.webl{font:500 12px "JetBrains Mono";color:#7FB8FF;text-decoration:none;display:inline-block;margin-bottom:10px;word-break:break-all}
+.stlabel{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin:2px 0 6px}
+.seg{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px}
+.seg button{font-size:12px;border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:var(--card2);color:var(--muted)}
+.seg button.on{border-color:var(--lime);color:var(--lime);background:rgba(200,255,58,.07)}
+.svc{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--card2);margin-bottom:7px;width:100%;text-align:left;border:1px solid transparent}
+.svc .ck{width:22px;height:22px;border-radius:50%;background:var(--lime);color:#0B1A11;display:grid;place-items:center;font-size:12px;font-weight:800;flex-shrink:0}
+.svc.off{opacity:.45}
+.svc.off .ck{background:transparent;border:1.5px solid var(--dim);color:transparent}
+.svc .sn{flex:1;min-width:0;font-weight:600;font-size:13.5px}
+.svc .sn small{display:block;font-weight:400;font-size:11.5px;color:var(--muted);margin-top:1px}
+.svc .sp{font-weight:700;font-size:12.5px;color:var(--lime);text-align:right;white-space:nowrap;line-height:1.35}
+.svc .sp small{display:block;font-weight:600;font-size:11px;color:var(--banana)}
+.tot{display:flex;flex-direction:column;gap:2px;padding:10px 4px 2px;font-size:13px;color:var(--muted)}
+.tot b{color:var(--text);font-size:14px}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}
+.act{height:44px;border-radius:12px;border:1px solid var(--line2);background:var(--bg2);display:flex;align-items:center;justify-content:center;gap:7px;font-weight:600;font-size:14px;text-decoration:none}
+.act.full{grid-column:1/-1}
+.act.lime{background:var(--lime);color:#0B1A11;border-color:var(--lime)}
+.phone{font:500 12px "JetBrains Mono";color:var(--muted);text-align:center;margin-top:7px}
+.nophone{font:500 12px "JetBrains Mono";color:var(--dim);margin-top:8px}
+
+.empty{border:1px solid var(--line);border-radius:var(--r);padding:26px 16px;text-align:center;color:var(--muted);background:var(--card)}
+.empty .btn{margin-top:12px}
+.foot{font-size:11.5px;color:var(--dim);text-align:center;margin-top:22px;line-height:1.55}
+.foot b{color:var(--lime);font-weight:600}
+
+/* sheet */
+.ov{position:fixed;inset:0;background:rgba(2,8,5,.72);backdrop-filter:blur(3px);display:none;z-index:50;align-items:flex-end;justify-content:center}
+.ov.show{display:flex}
+.sheet{width:100%;max-width:620px;max-height:90vh;overflow:auto;background:var(--bg2);border:1px solid var(--line2);border-bottom:0;border-radius:22px 22px 0 0;padding:18px 16px calc(22px + env(safe-area-inset-bottom))}
+.sheet h3{font-family:"Bricolage Grotesque",Inter,system-ui,sans-serif;font-weight:800;font-size:21px;margin:0 0 6px;letter-spacing:-.02em}
+.sheet p{color:var(--muted);font-size:13.5px;margin:0 0 12px}
+.x{float:right;width:32px;height:32px;border-radius:10px;background:var(--card2);font-size:15px}
+.step{display:flex;gap:11px;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--card);margin-bottom:8px}
+.step .n{width:26px;height:26px;border-radius:50%;background:var(--lime);color:#0B1A11;font-weight:800;display:grid;place-items:center;font-size:13px;flex-shrink:0}
+.step .c{flex:1;min-width:0;font-size:13.5px}
+.step .c b{display:block;margin-bottom:3px}
+.step .c span{color:var(--muted);font-size:12.5px}
+.step .btns{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.drop{display:block;border:1.5px dashed var(--line2);border-radius:14px;padding:18px;text-align:center;color:var(--muted);font-size:13px;cursor:pointer}
+.drop.hot{border-color:var(--lime);color:var(--lime)}
+.drop input{display:none}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:9px;font-size:12px;color:var(--muted)}
+.field input,.field select{height:42px;border-radius:11px;border:1px solid var(--line2);background:var(--card);padding:0 11px;outline:0;font-size:15px;color:var(--text)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.prow{display:grid;grid-template-columns:1fr 62px 62px 52px;gap:5px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.prow input{height:32px;border-radius:8px;border:1px solid var(--line2);background:var(--card);padding:0 6px;width:100%;font-size:13px;color:var(--text);text-align:right}
+.prow.h{color:var(--dim);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em}
+.prow.h div:not(:first-child){text-align:right}
+.toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(30px);background:var(--lime);color:#0B1A11;font-weight:700;font-size:13.5px;padding:10px 16px;border-radius:12px;opacity:0;transition:.25s;z-index:80;box-shadow:0 8px 30px rgba(0,0,0,.4);max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.citylist{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 12px}
+.citylist button{font-size:12px;border:1px solid var(--line2);border-radius:999px;padding:5px 10px;background:var(--card);color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div class="brand"><div class="logo">🐒</div><div><small>Radar de clientes</small>SoyBrainMonkey</div></div>
+    <div style="display:flex;gap:6px">
+      <button class="iconbtn" id="btnPrices">€ Precios</button>
+      <button class="iconbtn" id="btnAdd" aria-label="Añadir negocio">＋</button>
+    </div>
+  </div>
+
+  <div class="hero">
+    <span class="pill"><i></i>Cazando clientes en la selva</span>
+    <h1>Tu próximo cliente<br><span>está en tu ciudad.</span></h1>
+    <p class="sub">Descubre qué negocios <b>no tienen web, app o SaaS</b>, o <b>los tienen mal hechos</b>. Cuánto te pagarían y cómo contactarles.</p>
+  </div>
+
+  <form class="search" id="searchForm" autocomplete="off">
+    <label class="in"><span>📍</span><input id="cityInput" placeholder="Escribe una ciudad" enterkeyhint="go"></label>
+    <button class="btn" type="submit">Calcular</button>
+  </form>
+  <div class="citylist" id="savedCities" style="margin-top:10px"></div>
+
+  <div class="mapbox">
+    <svg id="map" role="img" aria-label="Mapa de negocios"></svg>
+    <div id="lmap" hidden style="height:270px"></div>
+    <div class="mapempty" id="mapEmpty" hidden></div>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--lime)"></i>+3.500 €</span>
+      <span><i class="dot" style="background:var(--orange)"></i>1.500 – 3.500 €</span>
+      <span><i class="dot" style="background:#5E7A68"></i>menos</span>
+    </div>
+    <div class="maptag" id="maptag">© OpenStreetMap</div>
+  </div>
+
+  <div id="demoBanner" class="banner" hidden>
+    <span>Estás viendo <b>datos de ejemplo</b> (negocios inventados).</span>
+    <button id="demoImport">Traer mi ciudad</button>
+  </div>
+
+  <h2>¿A quién te gustaría venderle<br>una solución con IA?</h2>
+  <div class="row">
+    <button class="citychip" id="cityChip">📍 <span id="cityName">—</span> · <u>cambiar</u></button>
+    <div class="counts" id="counts"></div>
+  </div>
+
+  <div class="cats" id="cats"></div>
+
+  <div class="tools">
+    <button class="tool on" id="tSort"><span class="sw"></span>Más dinero primero</button>
+    <button class="tool" id="tPhone"><span class="sw"></span>Solo con teléfono</button>
+    <button class="tool" id="tExport">⬇ Descargar lista</button>
+    <input class="filter" id="q" placeholder="Buscar negocio…" type="search">
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <p class="foot">Precios orientativos de mercado (editables en <b>€ Precios</b>). El estado de la web sale de OpenStreetMap: revísalo antes de contactar.<br>Datos de negocios © colaboradores de OpenStreetMap.<br><br><b>Nos vemos en la selva 🐒</b></p>
+</div>
+
+<!-- Import sheet -->
+<div class="ov" id="ovImport">
+  <div class="sheet">
+    <button class="x" data-close>✕</button>
+    <h3>Traer negocios de <span id="impCity" style="color:var(--lime)">tu ciudad</span></h3>
+    <p>Los negocios salen de OpenStreetMap. Desde aquí no he podido buscarlos solo (dentro de Claude la página no puede conectarse a internet). Abierta desde tu web se hace sola; mientras, tráelos en 3 pasos:</p>
+    <div class="step"><div class="n">1</div><div class="c"><b>Abre la búsqueda ya preparada</b><span>Se abre Overpass Turbo y busca todos los negocios con nombre de la ciudad. Espera a que salgan los puntos en el mapa.</span>
+      <div class="btns"><a class="btn sm" id="otLink" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none">Abrir búsqueda ↗</a><button class="btn sm ghost" id="copyQuery">Copiar consulta</button></div></div></div>
+    <div class="step"><div class="n">2</div><div class="c"><b>Exporta</b><span>Pulsa <b style="display:inline;color:var(--text)">Exportar</b> → <b style="display:inline;color:var(--text)">GeoJSON</b> → descargar. Se guarda en Archivos.</span></div></div>
+    <div class="step"><div class="n">3</div><div class="c"><b>Súbelo aquí</b><span>También vale un .json de Overpass o un .csv (por ejemplo, exportado de Google Maps) con nombre, categoría, web y teléfono.</span>
+      <label class="drop" id="drop" style="margin-top:9px">📂 Toca para elegir el archivo<input type="file" id="file" accept=".geojson,.json,.csv,.txt,application/json,text/csv" multiple></label></div></div>
+    <button class="btn ghost" id="useDemo" style="width:100%;margin-top:4px">Ver con datos de ejemplo</button>
+  </div>
+</div>
+
+<!-- Add sheet -->
+<div class="ov" id="ovAdd">
+  <div class="sheet">
+    <button class="x" data-close>✕</button>
+    <h3>Añadir negocio</h3>
+    <p>Para negocios que conoces y no aparecen en el mapa.</p>
+    <form id="addForm">
+      <label class="field">Nombre<input name="name" required></label>
+      <div class="grid2">
+        <label class="field">Categoría<select name="cat" id="addCat"></select></label>
+        <label class="field">Web<select name="ws"><option value="none">No tiene</option><option value="broken">No carga</option><option value="bad">Mal hecha</option><option value="ok">Está bien</option></select></label>
+      </div>
+      <div class="grid2">
+        <label class="field">Teléfono<input name="phone" inputmode="tel"></label>
+        <label class="field">Dirección web<input name="web" inputmode="url"></label>
+      </div>
+      <button class="btn" style="width:100%">Añadir a la lista</button>
+    </form>
+  </div>
+</div>
+
+<!-- Prices sheet -->
+<div class="ov" id="ovPrices">
+  <div class="sheet">
+    <button class="x" data-close>✕</button>
+    <h3>Tus precios</h3>
+    <p>Ajusta lo que cobras por cada solución. El potencial de cada negocio se recalcula al momento.</p>
+    <div class="prow h"><div>Solución</div><div>Desde €</div><div>Hasta €</div><div>€/mes</div></div>
+    <div id="priceRows"></div>
+    <button class="btn ghost" id="resetPrices" style="width:100%;margin-top:12px">Volver a precios de mercado</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,".");
+const eur=n=>fmt(n)+" €";
+
+/* ---------- catálogo de soluciones ---------- */
+const DEFAULT_SVC={
+  webNueva:{n:"Web nueva",d:"No tiene página web",min:900,max:1800,mes:0,tag:"Web"},
+  webRehacer:{n:"Web nueva",d:"Su web no funciona o está anticuada",min:1200,max:2500,mes:0,tag:"Web"},
+  rebranding:{n:"Rebranding",d:"Sin imagen de marca online",min:300,max:900,mes:0,tag:"Marca"},
+  reservas:{n:"Web de reservas",d:"No reserva online: pierde mesas",min:500,max:1500,mes:30,tag:"Reservas"},
+  carta:{n:"Carta digital (SaaS)",d:"Carta con QR y pedidos en mesa",min:0,max:0,mes:49,tag:"Carta QR"},
+  agenteRes:{n:"Agente de WhatsApp de reservas",d:"Reserva, responde y confirma por WhatsApp sin nadie detrás",min:350,max:900,mes:45,tag:"WhatsApp"},
+  campanas:{n:"Campañas por WhatsApp a sus clientes",d:"Promos y avisos que vuelven a llenar la agenda",min:200,max:350,mes:60,tag:"Campañas"},
+  resenas:{n:"Gestor de reseñas con IA",d:"Pide reseñas y responde en Google solo",min:150,max:400,mes:25,tag:"Reseñas"},
+  citas:{n:"Citas online (SaaS)",d:"Citas solo por teléfono: pierde las de fuera de horario",min:0,max:0,mes:39,tag:"Citas"},
+  recordatorios:{n:"Recordatorios WhatsApp (SaaS)",d:"Avisos automáticos que evitan huecos vacíos",min:0,max:0,mes:29,tag:"Avisos"},
+  vozIA:{n:"Recepcionista de voz con IA",d:"Atiende y agenda llamadas 24/7, también fuera de horario",min:500,max:1200,mes:90,tag:"Voz IA"},
+  agenteWA:{n:"Agente de WhatsApp con IA",d:"Responde dudas y capta clientes 24/7",min:350,max:900,mes:45,tag:"WhatsApp"},
+  appSocios:{n:"App / área de socios",d:"Reserva de clases, cuotas y avisos",min:1500,max:4000,mes:60,tag:"App"},
+  portal:{n:"Portal de clientes",d:"Suben documentos y ven el estado de sus trámites",min:1200,max:3000,mes:40,tag:"Portal"},
+  automDocs:{n:"Automatización de documentos con IA",d:"Clasifica facturas y prepara trámites solo",min:800,max:2000,mes:50,tag:"Automatización"},
+  catalogo:{n:"Web con catálogo de inmuebles",d:"Fichas, filtros y captación de propietarios",min:1500,max:3500,mes:40,tag:"Catálogo"},
+  agenteLeads:{n:"Agente IA de captación",d:"Cualifica compradores por WhatsApp y agenda visitas",min:500,max:1200,mes:60,tag:"Leads"},
+  crm:{n:"CRM con seguimiento automático",d:"Que no se escape ningún cliente",min:800,max:2000,mes:50,tag:"CRM"},
+  recordatoriosITV:{n:"Recordatorios de revisión e ITV",d:"Avisa al cliente cuando le toca volver",min:0,max:0,mes:29,tag:"Avisos"},
+  presupWA:{n:"Presupuestos por WhatsApp con IA",d:"Envía y cierra presupuestos en minutos",min:300,max:800,mes:35,tag:"Presupuestos"},
+  reservasDirectas:{n:"Web de reservas directas",d:"Menos comisión a Booking",min:1200,max:3000,mes:40,tag:"Reservas"},
+  matricula:{n:"Matrícula y pagos online",d:"Inscripciones y cobros sin papeleo",min:600,max:1500,mes:35,tag:"Matrícula"},
+  tienda:{n:"Tienda online",d:"Vende también fuera del horario de tienda",min:1200,max:3000,mes:30,tag:"Tienda"},
+  catalogoWA:{n:"Catálogo y pedidos por WhatsApp",d:"Pedidos directos desde el móvil",min:300,max:700,mes:29,tag:"Pedidos"}
+};
+const CATS={
+  rest:{n:"Restaurantes",i:"🍽️",t:"LOW",s:["reservas","carta","agenteRes","campanas"]},
+  bar:{n:"Bares y cafeterías",i:"☕",t:"LOW",s:["carta","resenas","campanas"]},
+  pelu:{n:"Peluquerías y estética",i:"💇",t:"LOW",s:["citas","recordatorios","vozIA","campanas"]},
+  gym:{n:"Gimnasios",i:"🏋️",t:"MEDIUM",s:["appSocios","agenteWA","campanas"]},
+  ases:{n:"Asesorías",i:"📊",t:"MEDIUM",s:["portal","automDocs","agenteWA"]},
+  clin:{n:"Clínicas",i:"🦷",t:"HIGH",s:["citas","recordatorios","vozIA","agenteWA"]},
+  vet:{n:"Veterinarias",i:"🐾",t:"MEDIUM",s:["citas","recordatorios","agenteWA"]},
+  inmo:{n:"Inmobiliarias",i:"🏠",t:"HIGH",s:["catalogo","agenteLeads","crm"]},
+  taller:{n:"Talleres y oficios",i:"🔧",t:"MEDIUM",s:["citas","recordatoriosITV","presupWA"]},
+  hotel:{n:"Hoteles",i:"🛏️",t:"HIGH",s:["reservasDirectas","agenteWA","vozIA"]},
+  acad:{n:"Academias",i:"🎓",t:"MEDIUM",s:["matricula","recordatorios","campanas"]},
+  shop:{n:"Comercios",i:"🛍️",t:"LOW",s:["tienda","catalogoWA","campanas"]},
+  otros:{n:"Otros",i:"📍",t:"LOW",s:["agenteWA","campanas"]}
+};
+const WS={none:{l:"No tiene página web",c:"",p:"Alta"},broken:{l:"Su web no carga",c:"",p:"Alta"},bad:{l:"Web anticuada o mal hecha",c:"warn",p:"Media"},unchecked:{l:"Tiene web (revísala)",c:"warn",p:"Media"},ok:{l:"Web correcta",c:"ok",p:"Baja"}};
+
+/* ---------- estado ---------- */
+const LS="sbm_radar_v1";
+let store={cities:{},current:null,prices:null};
+try{const raw=localStorage.getItem(LS);if(raw)store=Object.assign(store,JSON.parse(raw));}catch(e){}
+const save=()=>{try{localStorage.setItem(LS,JSON.stringify(store));}catch(e){}};
+let SVC=JSON.parse(JSON.stringify(DEFAULT_SVC));
+if(store.prices){for(const k in store.prices)if(SVC[k])Object.assign(SVC[k],store.prices[k]);}
+
+let city=null, list=[], isDemo=false;
+let ui={cat:"all",sort:true,phone:false,q:"",open:null};
+
+/* ---------- clasificación ---------- */
+function classifyTags(t){
+  const a=t.amenity,s=t.shop,o=t.office,l=t.leisure,tr=t.tourism,h=t.healthcare,c=t.craft;
+  if(a==="restaurant"||a==="fast_food"||a==="food_court")return"rest";
+  if(a==="cafe"||a==="bar"||a==="pub"||a==="ice_cream")return"bar";
+  if(s==="hairdresser"||s==="beauty"||s==="massage"||s==="tattoo"||s==="cosmetics"&&t.beauty)return"pelu";
+  if(l==="fitness_centre"||l==="sports_centre"||a==="gym")return"gym";
+  if(a==="veterinary")return"vet";
+  if(a==="dentist"||a==="clinic"||a==="doctors"||(h&&h!=="pharmacy"&&h!=="yes"))return"clin";
+  if(o==="estate_agent"||s==="estate_agent")return"inmo";
+  if(["accountant","lawyer","tax_advisor","consulting","insurance","notary","financial"].includes(o))return"ases";
+  if(tr==="hotel"||tr==="guest_house"||tr==="hostel"||tr==="apartment"||tr==="motel")return"hotel";
+  if(["driving_school","language_school","music_school","dancing_school","prep_school"].includes(a)||o==="educational_institution")return"acad";
+  if(["car_repair","car","tyres","motorcycle","car_parts"].includes(s)||c)return"taller";
+  if(s)return"shop";
+  return"otros";
+}
+function classifyText(x){
+  x=(x||"").toLowerCase();
+  const R=[["rest",/restaur|asador|mes[oó]n|pizz|kebab|hamburg|sushi|comida|marisquer|taquer/],["bar",/\bbar\b|cafeter|caf[eé]|cervecer|pub|tapas|helader/],
+  ["pelu",/peluquer|barber|est[eé]tica|belleza|u[ñn]as|spa|masaj|tatu/],["gym",/gimnas|gym|fitness|crossfit|pilates|yoga/],
+  ["vet",/veterin/],["clin",/cl[ií]nica|dental|dentist|m[eé]dic|fisio|podolog|psic[oó]log|[oó]ptica|salud/],["inmo",/inmobil|real estate/],
+  ["ases",/asesor|gestor|abogad|notar|seguro|contab|consult/],["hotel",/hotel|hostal|alojamiento|casa rural|apartamento|pensi[oó]n/],
+  ["acad",/academia|autoescuela|escuela|idioma|formaci|colegio/],["taller",/taller|mec[aá]nic|neum[aá]tic|chapa|fontaner|electricist|carpinter|cerrajer|reforma/],
+  ["shop",/tienda|comercio|boutique|floristr|panader|carnicer|fruter|librer|zapater|ferreter|moda|joyer/]];
+  for(const [k,re] of R)if(re.test(x))return k;
+  return"otros";
+}
+function mkBiz(o){
+  return{id:o.id||("b"+Math.random().toString(36).slice(2,9)),name:o.name,cat:o.cat,phone:(o.phone||"").trim(),web:(o.web||"").trim(),
+    lat:isFinite(o.lat)?+o.lat:null,lon:isFinite(o.lon)?+o.lon:null,addr:o.addr||"",ws:o.ws||((o.web||"").trim()?"unchecked":"none"),off:o.off||[]};
+}
+function centroid(g){
+  if(!g)return[null,null];
+  if(g.type==="Point")return[g.coordinates[1],g.coordinates[0]];
+  const pts=[];(function walk(c){if(typeof c[0]==="number")pts.push(c);else c.forEach(walk);})(g.coordinates||[]);
+  if(!pts.length)return[null,null];
+  let la=0,lo=0;pts.forEach(p=>{lo+=p[0];la+=p[1];});return[la/pts.length,lo/pts.length];
+}
+function addrFromTags(t){return[t["addr:street"],t["addr:housenumber"]].filter(Boolean).join(" ");}
+function fromTags(t,lat,lon,id){
+  if(!t||!t.name)return null;
+  return mkBiz({id:id?String(id):null,name:t.name,cat:classifyTags(t),phone:t.phone||t["contact:phone"]||t["contact:mobile"]||"",
+    web:t.website||t["contact:website"]||t.url||"",lat,lon,addr:addrFromTags(t)});
+}
+function parseCSV(text){
+  const first=text.split(/\r?\n/)[0]||"";const d=(first.split(";").length>first.split(",").length)?";":",";
+  const rows=[];let row=[],cur="",q=false;
+  for(let i=0;i<text.length;i++){const ch=text[i];
+    if(q){if(ch==='"'){if(text[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=ch;}
+    else if(ch==='"')q=true;else if(ch===d){row.push(cur);cur="";}
+    else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&text[i+1]==="\n")i++;row.push(cur);rows.push(row);row=[];cur="";}
+    else cur+=ch;}
+  if(cur||row.length){row.push(cur);rows.push(row);}
+  if(rows.length<2)return[];
+  const H=rows[0].map(h=>h.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,""));
+  const f=(...keys)=>H.findIndex(h=>keys.some(k=>h===k||h.includes(k)));
+  const iN=f("name","nombre","title","titulo"),iC=f("category","categoria","type","tipo"),iW=f("website","web","sitio","url"),
+    iP=f("phone","telefono","tel"),iLa=f("lat","latitud","latitude"),iLo=f("lon","lng","longitud","longitude"),iA=f("address","direccion");
+  if(iN<0)return[];
+  return rows.slice(1).filter(r=>r[iN]&&r[iN].trim()).map(r=>mkBiz({name:r[iN].trim(),cat:classifyText((iC>=0?r[iC]:"")+" "+r[iN]),
+    web:iW>=0?r[iW]:"",phone:iP>=0?r[iP]:"",lat:iLa>=0?parseFloat(String(r[iLa]).replace(",",".")):NaN,lon:iLo>=0?parseFloat(String(r[iLo]).replace(",",".")):NaN,addr:iA>=0?r[iA]:""}));
+}
+function parseFile(text){
+  const tt=text.trim();
+  if(tt[0]==="{"||tt[0]==="["){
+    const j=JSON.parse(tt);
+    if(j.features)return j.features.map(ft=>{const p=ft.properties||{};const t=p.tags||p;const [la,lo]=centroid(ft.geometry);return fromTags(t,la,lo,p["@id"]||p.id||ft.id);}).filter(Boolean);
+    if(j.elements)return j.elements.map(e=>{const la=e.lat!=null?e.lat:e.center&&e.center.lat;const lo=e.lon!=null?e.lon:e.center&&e.center.lon;return fromTags(e.tags,la,lo,e.type+"/"+e.id);}).filter(Boolean);
+    if(Array.isArray(j))return j.filter(x=>x&&(x.name||x.nombre)).map(x=>mkBiz({name:x.name||x.nombre,cat:classifyText((x.category||x.categoria||"")+" "+(x.name||x.nombre)),web:x.website||x.web||"",phone:x.phone||x.telefono||"",lat:x.lat,lon:x.lon||x.lng}));
+    return[];
+  }
+  return parseCSV(text);
+}
+
+/* ---------- cálculo ---------- */
+function services(b){
+  const ids=[];
+  if(b.ws==="none")ids.push("webNueva","rebranding");
+  else if(b.ws==="broken")ids.push("webRehacer","rebranding");
+  else if(b.ws==="bad")ids.push("webRehacer");
+  CATS[b.cat].s.forEach(s=>{if(!ids.includes(s))ids.push(s);});
+  return ids;
+}
+function value(b){
+  let min=0,max=0,mes=0;
+  services(b).forEach(id=>{if(b.off.includes(id))return;const s=SVC[id];min+=s.min;max+=s.max;mes+=s.mes;});
+  return{min,max,mid:(min+max)/2,mes};
+}
+const bucket=v=>v>=3500?"var(--lime)":v>=1500?"var(--orange)":"#5E7A68";
+const svcPrice=s=>{const a=s.min||s.max?(s.min===s.max?eur(s.min):fmt(s.min)+" – "+eur(s.max)):"";return a?(a+(s.mes?`<small>+ ${s.mes} €/mes</small>`:"")):s.mes+" €/mes";};
+
+/* ---------- datos de ejemplo (inventados) ---------- */
+function demo(){
+  const c=[40.6326,-3.1663];let seed=7;const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280;};
+  const D=[["La Taberna del Ejemplo","rest","none",1],["Mesón Los Pinos","rest","none",1],["Asador Río Verde","rest","broken",1],["Pizzería Nonna Demo","rest","bad",1],
+  ["Bar La Esquina","bar","none",1],["Cafetería Aurora","bar","none",0],["Café Plaza Mayor","bar","unchecked",1],
+  ["Peluquería Valle","pelu","none",1],["Estudio Belleza Luna","pelu","none",1],["Barbería Norte","pelu","unchecked",1],
+  ["Gimnasio Fuerza Selva","gym","bad",1],["Box Crossfit Demo","gym","none",0],
+  ["Asesoría Henares","ases","none",1],["Gestoría Alcarria","ases","broken",1],
+  ["Clínica Dental Sonríe","clin","unchecked",1],["Fisio Centro Demo","clin","none",1],["Centro Médico Olmo","clin","bad",1],
+  ["Veterinaria Patitas","vet","none",1],["Inmobiliaria Casa Fácil","inmo","bad",1],["Inmobiliaria Torreón","inmo","none",1],
+  ["Taller Mecánico Ruedas","taller","none",1],["Fontanería Gotas","taller","none",0],["Hostal El Mirador","hotel","broken",1],
+  ["Academia Idiomas Babel","acad","none",1],["Autoescuela Verde","acad","unchecked",1],["Floristería Lirio","shop","none",1],["Panadería Espiga","shop","none",0],["Zapatería Paso","shop","unchecked",1]];
+  return D.map((d,i)=>mkBiz({id:"demo"+i,name:d[0],cat:d[1],ws:d[2],web:d[2]==="none"?"":"",phone:d[3]?"949 000 "+String(100+i*7).slice(-3):"",lat:c[0]+(rnd()-.5)*.03,lon:c[1]+(rnd()-.5)*.045}));
+}
+
+/* ---------- render ---------- */
+function filtered(){
+  let L=list.slice();
+  if(ui.cat!=="all")L=L.filter(b=>b.cat===ui.cat);
+  if(ui.phone)L=L.filter(b=>b.phone);
+  if(ui.q){const q=ui.q.toLowerCase();L=L.filter(b=>b.name.toLowerCase().includes(q));}
+  L.forEach(b=>b._v=value(b));
+  L.sort(ui.sort?(a,b)=>b._v.mid-a._v.mid:(a,b)=>a.name.localeCompare(b.name,"es"));
+  return L;
+}
+function renderCats(){
+  const cnt={};list.forEach(b=>cnt[b.cat]=(cnt[b.cat]||0)+1);
+  let h=`<button class="cat ${ui.cat==="all"?"on":""}" data-cat="all"><span class="ic">🌴</span><span class="nm">Todos</span><span class="ct">${list.length}</span></button>`;
+  Object.keys(CATS).filter(k=>cnt[k]).sort((a,b)=>cnt[b]-cnt[a]).forEach(k=>{const c=CATS[k];
+    h+=`<button class="cat ${ui.cat===k?"on":""}" data-cat="${k}"><span class="ic">${c.i}</span><span class="nm">${esc(c.n)}</span><span class="ct">${cnt[k]}</span><span class="tk ${c.t}">${c.t} TICKET</span></button>`;});
+  $("#cats").innerHTML=h;
+}
+function card(b){
+  const v=b._v,ws=WS[b.ws],ids=services(b),on=ids.filter(i=>!b.off.includes(i));
+  const tags=on.slice(0,2).map(i=>`<span class="chip">${esc(SVC[i].tag)}</span>`).join("")+(on.length>2?`<span class="chip">+${on.length-2}</span>`:"");
+  const open=ui.open===b.id;
+  const tel=b.phone.replace(/[^\d+]/g,"");
+  const wa=tel?(tel.startsWith("+")?tel.slice(1):(tel.length===9?"34"+tel:tel)):"";
+  let webUrl=b.web;if(webUrl&&!/^https?:/i.test(webUrl))webUrl="https://"+webUrl;
+  return `<div class="biz ${open?"open":""}" id="c_${esc(b.id)}" data-id="${esc(b.id)}">
+  <button class="bh" data-toggle>
+    <div class="bl"><div class="bn">${esc(b.name)}</div>
+      <div class="bm">${esc(CATS[b.cat].n)} · <span class="p ${ws.c}">${ws.l}</span></div>
+      <div class="chips">${tags}</div></div>
+    <div class="br">${ws.p==="Alta"?'<span class="prio Alta">🔥 Alta</span>':`<span class="prio ${ws.p}">${ws.p}</span>`}
+      <div class="val"><small>hasta</small>${eur(v.mid)}</div>
+      <div class="mes">${v.mes?"+"+v.mes+" €/mes":"sin cuota"}</div>
+      <span class="ph ${b.phone?"":"no"}" title="${b.phone?"Tiene teléfono":"Sin teléfono"}">${b.phone?"✆":"–"}</span></div>
+    <span class="chev">⌄</span>
+  </button>
+  <div class="bd">${open?`
+    ${b.web?`<a class="webl" href="${esc(webUrl)}" target="_blank" rel="noopener">🌐 Ver su web actual ↗</a>`:""}
+    ${b.addr?`<div class="bm" style="margin:-4px 0 10px">📍 ${esc(b.addr)}</div>`:""}
+    <div class="stlabel">¿Cómo está su web?</div>
+    <div class="seg">${["none","broken","bad","ok"].map(k=>`<button data-ws="${k}" class="${b.ws===k?"on":""}">${{none:"No tiene",broken:"No carga",bad:"Mal hecha",ok:"Está bien"}[k]}</button>`).join("")}</div>
+    <div class="stlabel">Lo que le puedes vender · toca para quitar</div>
+    ${ids.map(i=>{const s=SVC[i];const off=b.off.includes(i);return `<button class="svc ${off?"off":""}" data-svc="${i}"><span class="ck">✓</span><span class="sn">${esc(s.n)}<small>${esc(i==="webNueva"||i==="webRehacer"?ws.l:s.d)}</small></span><span class="sp">${svcPrice(s)}</span></button>`;}).join("")}
+    <div class="tot"><span>Rango de proyecto</span><b>${eur(v.min)} – ${eur(v.max)}${v.mes?" · +"+v.mes+" €/mes":""}</b></div>
+    <div class="acts">
+      ${tel?`<a class="act lime" href="tel:${esc(tel)}">✆ Llamar</a><a class="act" href="https://wa.me/${esc(wa)}" target="_blank" rel="noopener">💬 WhatsApp</a>`:""}
+      <button class="act ${tel?"":"full"}" data-pitch style="${tel?"grid-column:1/-1":""}">✍️ Copiar mensaje de presentación</button>
+    </div>
+    ${tel?`<div class="phone">✆ ${esc(b.phone)}</div>`:`<div class="nophone">Sin teléfono público en el mapa</div>`}`:""}
+  </div></div>`;
+}
+function renderList(){
+  const L=filtered();
+  $("#list").innerHTML=L.length?L.map(card).join(""):
+    (list.length?`<div class="empty">No hay negocios con este filtro en ${esc(city||"")}.<br><button class="btn sm" data-all>Ver todos</button></div>`:
+    `<div class="empty">Aún no hay negocios cargados.<br><button class="btn sm" data-import>Traer negocios</button></div>`);
+  const alta=list.filter(b=>WS[b.ws].p==="Alta").length;
+  const tot=list.reduce((s,b)=>s+value(b).mid,0);
+  $("#counts").innerHTML=list.length?`<b>${alta}</b> prioridad alta · potencial <b>${eur(tot)}</b>`:"";
+  renderMap(L);
+}
+let lmap=null,llayer=null;
+function renderLeaflet(pts){
+  const el=$("#lmap");el.hidden=false;$("#maptag").hidden=true;$("#map").style.display="none";
+  if(!lmap){lmap=L.map(el,{zoomControl:true,attributionControl:true});
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:19,attribution:'© OpenStreetMap · © CARTO'}).addTo(lmap);
+    llayer=L.layerGroup().addTo(lmap);}
+  setTimeout(()=>lmap.invalidateSize(),0);
+  llayer.clearLayers();
+  pts.slice().sort((x,y)=>x._v.mid-y._v.mid).forEach(p=>{const col=getComputedStyle(document.documentElement).getPropertyValue(bucket(p._v.mid).replace(/var\((.*)\)/,"$1")).trim()||bucket(p._v.mid);
+    L.circleMarker([p.lat,p.lon],{radius:6,color:"#06110B",weight:1.5,fillColor:col,fillOpacity:.95}).on("click",()=>focusBiz(p.id)).addTo(llayer);});
+  lmap.fitBounds(L.latLngBounds(pts.map(p=>[p.lat,p.lon])),{padding:[24,24],maxZoom:16});
+}
+function renderMap(L_){
+  const L=L_;
+  if(liveOK&&window.L&&!isDemo){const pts=L.filter(b=>b.lat!=null&&b.lon!=null);if(pts.length){$("#mapEmpty").hidden=true;renderLeaflet(pts);return;}}
+  $("#lmap").hidden=true;$("#maptag").hidden=false;$("#map").style.display="block";
+  const svg=$("#map"),W=svg.clientWidth||600,H=270;svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  const pts=L.filter(b=>b.lat!=null&&b.lon!=null);
+  const me=$("#mapEmpty");
+  let g=`<defs><radialGradient id="glow" cx="50%" cy="45%" r="65%"><stop offset="0" stop-color="#C8FF3A" stop-opacity=".09"/><stop offset="1" stop-color="#C8FF3A" stop-opacity="0"/></radialGradient>
+  <filter id="bl"><feGaussianBlur stdDeviation="2.4"/></filter></defs><rect width="${W}" height="${H}" fill="url(#glow)"/>`;
+  for(let x=0;x<W;x+=34)g+=`<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="#12261A" stroke-width="1"/>`;
+  for(let y=0;y<H;y+=34)g+=`<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="#12261A" stroke-width="1"/>`;
+  if(!pts.length){svg.innerHTML=g;me.hidden=false;me.textContent=list.length?"Estos negocios no traen coordenadas":"Busca una ciudad para escanear la selva…";return;}
+  me.hidden=true;
+  let a=Infinity,b=-Infinity,c=Infinity,d=-Infinity;pts.forEach(p=>{a=Math.min(a,p.lat);b=Math.max(b,p.lat);c=Math.min(c,p.lon);d=Math.max(d,p.lon);});
+  const k=Math.cos((a+b)/2*Math.PI/180),pad=24;
+  let sx=(d-c)*k||.002,sy=(b-a)||.002;const s=Math.min((W-pad*2)/sx,(H-pad*2)/sy);
+  const ox=(W-sx*s)/2,oy=(H-sy*s)/2;
+  const P=p=>[ox+(p.lon-c)*k*s,H-(oy+(p.lat-a)*s)];
+  // radar rings
+  const cx=W/2,cy=H/2;[60,120,180].forEach(r=>g+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1A3524" stroke-dasharray="3 5"/>`);
+  pts.slice().sort((x,y)=>x._v.mid-y._v.mid).forEach(p=>{const [x,y]=P(p),col=bucket(p._v.mid);
+    g+=`<g data-pin="${esc(p.id)}" style="cursor:pointer"><circle cx="${x}" cy="${y}" r="7" fill="${col}" opacity=".45" filter="url(#bl)"/><circle cx="${x}" cy="${y}" r="4.6" fill="${col}" stroke="#06110B" stroke-width="1.4"/><circle cx="${x}" cy="${y}" r="13" fill="transparent"/></g>`;});
+  svg.innerHTML=g;
+}
+function renderCities(){
+  const names=Object.keys(store.cities);
+  $("#savedCities").innerHTML=names.length?names.map(n=>`<button data-city="${esc(n)}">📍 ${esc(n)} · ${store.cities[n].list.length}</button>`).join(""):"";
+}
+function renderAll(){
+  $("#cityName").textContent=city||"Sin ciudad";
+  $("#demoBanner").hidden=!isDemo;
+  renderCats();renderList();renderCities();
+}
+function persist(){if(isDemo||!city)return;store.cities[city]={list,updated:Date.now()};store.current=city;save();}
+
+/* ---------- import ---------- */
+function overpassQuery(cityName){
+  const area=cityName.includes(",")?cityName:cityName+", España";
+  return `[out:json][timeout:120];
+{{geocodeArea:${area}}}->.a;
+(
+  nwr["name"]["amenity"~"^(restaurant|fast_food|cafe|bar|pub|dentist|clinic|doctors|veterinary|driving_school|language_school|music_school|dancing_school)$"](area.a);
+  nwr["name"]["shop"](area.a);
+  nwr["name"]["craft"](area.a);
+  nwr["name"]["office"~"^(accountant|lawyer|tax_advisor|estate_agent|insurance|consulting|notary)$"](area.a);
+  nwr["name"]["leisure"~"^(fitness_centre|sports_centre)$"](area.a);
+  nwr["name"]["tourism"~"^(hotel|guest_house|hostel|apartment|motel)$"](area.a);
+  nwr["name"]["healthcare"](area.a);
+);
+out center tags;`;
+}
+let pendingCity=null;
+function openImport(name){
+  pendingCity=(name||city||"").trim()||"Guadalajara";
+  $("#impCity").textContent=pendingCity;
+  $("#otLink").href="https://overpass-turbo.eu/?Q="+encodeURIComponent(overpassQuery(pendingCity))+"&R";
+  show("#ovImport");
+}
+async function handleFiles(files){
+  let added=[];
+  for(const f of files){try{added=added.concat(parseFile(await f.text()));}catch(e){toast("No he podido leer "+f.name);}}
+  if(!added.length){toast("El archivo no trae negocios con nombre");return;}
+  const target=pendingCity||city||"Mi ciudad";
+  const base=(!isDemo&&city===target)?list:(store.cities[target]?store.cities[target].list:[]);
+  const seen=new Set(base.map(b=>b.name.toLowerCase()+"|"+(b.lat?b.lat.toFixed(4):"")));
+  const fresh=added.filter(b=>{const k=b.name.toLowerCase()+"|"+(b.lat?b.lat.toFixed(4):"");if(seen.has(k))return false;seen.add(k);return true;});
+  city=target;list=base.concat(fresh);isDemo=false;ui.cat="all";ui.open=null;
+  persist();hide("#ovImport");renderAll();toast(fresh.length+" negocios cargados en "+city);
+  document.querySelector("h2").scrollIntoView({behavior:"smooth"});
+}
+
+
+/* ---------- búsqueda automática (funciona donde la página puede conectarse a internet) ---------- */
+const OVERPASS=["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter","https://overpass.private.coffee/api/interpreter"];
+let liveOK=!!store.live;
+function withTimeout(ms){const c=new AbortController();setTimeout(()=>c.abort(),ms);return c.signal;}
+function liveBody(sel){
+  return `[out:json][timeout:90];${sel}
+(
+  nwr["name"]["amenity"~"^(restaurant|fast_food|cafe|bar|pub|dentist|clinic|doctors|veterinary|driving_school|language_school|music_school|dancing_school)$"](AREA);
+  nwr["name"]["shop"](AREA);
+  nwr["name"]["craft"](AREA);
+  nwr["name"]["office"~"^(accountant|lawyer|tax_advisor|estate_agent|insurance|consulting|notary)$"](AREA);
+  nwr["name"]["leisure"~"^(fitness_centre|sports_centre)$"](AREA);
+  nwr["name"]["tourism"~"^(hotel|guest_house|hostel|apartment|motel)$"](AREA);
+  nwr["name"]["healthcare"](AREA);
+);
+out center tags;`;
+}
+async function liveSearch(name){
+  const q=name.includes(",")?name:name+", España";
+  const r=await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=es&q="+encodeURIComponent(q),{signal:withTimeout(15000)});
+  if(!r.ok)throw new Error("geo");
+  const g=(await r.json())[0];if(!g)throw new Error("notfound");
+  let sel,area;
+  if(g.osm_type==="relation"){sel=`area(id:${3600000000+Number(g.osm_id)})->.a;`;area="area.a";}
+  else if(g.osm_type==="way"){sel=`area(id:${2400000000+Number(g.osm_id)})->.a;`;area="area.a";}
+  else{sel="";area=`around:2500,${g.lat},${g.lon}`;}
+  const body="data="+encodeURIComponent(liveBody(sel).replace(/AREA/g,area));
+  let lastErr;
+  for(const url of OVERPASS){
+    try{
+      const res=await fetch(url,{method:"POST",body,headers:{"Content-Type":"application/x-www-form-urlencoded"},signal:withTimeout(95000)});
+      if(!res.ok){lastErr=new Error("http "+res.status);continue;}
+      const j=await res.json();
+      const out=(j.elements||[]).map(e=>{const la=e.lat!=null?e.lat:e.center&&e.center.lat;const lo=e.lon!=null?e.lon:e.center&&e.center.lon;return fromTags(e.tags,la,lo,e.type+"/"+e.id);}).filter(Boolean);
+      const seen=new Set();return{list:out.filter(b=>{const k=b.name.toLowerCase()+"|"+(b.lat?b.lat.toFixed(4):"");if(seen.has(k))return false;seen.add(k);return true;}),label:(g.name||name)};
+    }catch(e){lastErr=e;if(e.message==="notfound")throw e;}
+  }
+  throw lastErr||new Error("overpass");
+}
+let busy=false;
+async function calcular(n){
+  if(busy)return;busy=true;
+  const me=$("#mapEmpty");me.hidden=false;me.classList.add("loading");me.textContent="Buscando negocios en "+n+"…";
+  $("#map").innerHTML="";$("#lmap").hidden=true;$("#map").style.display="block";
+  try{
+    const r=await liveSearch(n);liveOK=true;store.live=true;
+    // conserva lo que ya marcaste a mano si la ciudad estaba guardada
+    const key=Object.keys(store.cities).find(k=>k.toLowerCase()===n.toLowerCase());
+    const old=key?store.cities[key].list:[];const prev=new Map(old.map(b=>[b.id,b]));
+    r.list.forEach(b=>{const o=prev.get(b.id);if(o){b.ws=o.ws;b.off=o.off||[];}});
+    const manual=old.filter(b=>!/^(node|way|relation)\//.test(b.id));
+    city=key||n;list=r.list.concat(manual);isDemo=false;ui.cat="all";ui.open=null;
+    me.classList.remove("loading");persist();renderAll();
+    toast(r.list.length?r.list.length+" negocios encontrados en "+city:"No hay negocios en el mapa de "+city);
+  }catch(e){
+    me.classList.remove("loading");
+    const key=Object.keys(store.cities).find(k=>k.toLowerCase()===n.toLowerCase());
+    if(e.message==="notfound"){renderAll();toast("No encuentro “"+n+"”. Prueba con “"+n+", provincia”");}
+    else if(key){city=key;list=store.cities[key].list.map(mkBiz);isDemo=false;ui.cat="all";ui.open=null;store.current=key;save();renderAll();toast("Sin conexión: te enseño lo guardado de "+key);}
+    else{renderAll();openImport(n);}
+  }finally{busy=false;}
+}
+
+/* ---------- export ---------- */
+function csv(){
+  const head=["Nombre","Categoría","Estado web","Prioridad","Teléfono","Web","Potencial (€)","Desde (€)","Hasta (€)","Cuota (€/mes)","Soluciones","Dirección","Lat","Lon"];
+  const q=v=>{v=String(v==null?"":v);return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  const rows=filtered().map(b=>{const v=b._v;return[b.name,CATS[b.cat].n,WS[b.ws].l,WS[b.ws].p,b.phone,b.web,Math.round(v.mid),v.min,v.max,v.mes,services(b).filter(i=>!b.off.includes(i)).map(i=>SVC[i].n).join(" | "),b.addr,b.lat??"",b.lon??""];});
+  return "﻿"+[head].concat(rows).map(r=>r.map(q).join(";")).join("\n");
+}
+let downloads=null;
+if(window.claude&&window.claude.use){window.claude.use("downloads").then(d=>{downloads=d;}).catch(()=>{});}
+async function doExport(){
+  if(!list.length){toast("No hay negocios que descargar");return;}
+  const data=csv(),fn="negocios-"+(city||"lista").toLowerCase().replace(/[^a-z0-9]+/gi,"-")+".csv";
+  if(downloads){try{await downloads.save({filename:fn,data});return;}catch(e){}}
+  try{await navigator.clipboard.writeText(data);toast("Lista copiada: pégala en Excel o Sheets");}catch(e){toast("No se pudo descargar ni copiar");}
+}
+function pitch(b){
+  const ws=WS[b.ws],top=services(b).filter(i=>!b.off.includes(i)).slice(0,3).map(i=>SVC[i].n.toLowerCase());
+  const gancho=b.ws==="none"?"he visto que todavía no tenéis página web":b.ws==="broken"?"he entrado en vuestra web y no me carga":b.ws==="bad"?"he visto vuestra web y creo que os está haciendo perder clientes":"he estado viendo vuestro negocio";
+  return `¡Hola, ${b.name}! 👋 Soy de SoyBrainMonkey, en ${city||"la zona"}. ${gancho[0].toUpperCase()+gancho.slice(1)}. Ayudo a negocios como el vuestro con ${top.join(", ")} para que entren más clientes sin dedicarle más horas. ¿Os cuento en 5 minutos cómo quedaría en vuestro caso?`;
+}
+
+/* ---------- precios ---------- */
+function renderPrices(){
+  const used=new Set();Object.values(CATS).forEach(c=>c.s.forEach(s=>used.add(s)));["webNueva","webRehacer","rebranding"].forEach(s=>used.add(s));
+  $("#priceRows").innerHTML=Object.keys(SVC).filter(k=>used.has(k)).map(k=>{const s=SVC[k];const label=k==="webRehacer"?"Web nueva (rehacer)":s.n;
+    return `<div class="prow"><div>${esc(label)}</div><input inputmode="numeric" data-p="${k}" data-f="min" value="${s.min}"><input inputmode="numeric" data-p="${k}" data-f="max" value="${s.max}"><input inputmode="numeric" data-p="${k}" data-f="mes" value="${s.mes}"></div>`;}).join("");
+}
+
+/* ---------- utilidades UI ---------- */
+function show(s){$(s).classList.add("show");}
+function hide(s){$(s).classList.remove("show");}
+let tt;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("show"),2600);}
+const byId=id=>list.find(b=>b.id===id);
+
+/* ---------- eventos ---------- */
+$("#searchForm").addEventListener("submit",e=>{e.preventDefault();const n=$("#cityInput").value.trim();if(!n){$("#cityInput").focus();return;}$("#cityInput").blur();calcular(n);});
+$("#savedCities").addEventListener("click",e=>{const b=e.target.closest("[data-city]");if(!b)return;const k=b.dataset.city;city=k;list=store.cities[k].list.map(mkBiz);isDemo=false;ui.cat="all";ui.open=null;store.current=k;save();$("#cityInput").value=k;renderAll();});
+$("#cityChip").addEventListener("click",()=>{$("#cityInput").focus();window.scrollTo({top:0,behavior:"smooth"});});
+$("#demoImport").addEventListener("click",()=>openImport($("#cityInput").value||"Guadalajara"));
+$("#useDemo").addEventListener("click",()=>{city="Guadalajara (ejemplo)";list=demo();isDemo=true;ui.cat="all";ui.open=null;hide("#ovImport");renderAll();});
+$("#copyQuery").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(overpassQuery(pendingCity));toast("Consulta copiada");}catch(e){toast("No se pudo copiar");}});
+$("#file").addEventListener("change",e=>{handleFiles([...e.target.files]);e.target.value="";});
+const drop=$("#drop");["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("hot");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("hot");}));
+drop.addEventListener("drop",e=>handleFiles([...e.dataTransfer.files]));
+document.querySelectorAll(".ov").forEach(o=>o.addEventListener("click",e=>{if(e.target===o||e.target.closest("[data-close]"))o.classList.remove("show");}));
+
+$("#cats").addEventListener("click",e=>{const c=e.target.closest("[data-cat]");if(!c)return;ui.cat=c.dataset.cat;ui.open=null;renderCats();renderList();});
+$("#tSort").addEventListener("click",function(){ui.sort=!ui.sort;this.classList.toggle("on",ui.sort);renderList();});
+$("#tPhone").addEventListener("click",function(){ui.phone=!ui.phone;this.classList.toggle("on",ui.phone);renderList();});
+$("#tExport").addEventListener("click",doExport);
+$("#q").addEventListener("input",e=>{ui.q=e.target.value.trim();renderList();});
+
+$("#list").addEventListener("click",async e=>{
+  if(e.target.closest("[data-all]")){ui.cat="all";ui.phone=false;ui.q="";$("#q").value="";$("#tPhone").classList.remove("on");renderCats();renderList();return;}
+  if(e.target.closest("[data-import]")){openImport($("#cityInput").value);return;}
+  const el=e.target.closest(".biz");if(!el)return;const b=byId(el.dataset.id);if(!b)return;
+  if(e.target.closest("[data-toggle]")){ui.open=ui.open===b.id?null:b.id;renderList();if(ui.open){const n=document.getElementById("c_"+b.id);n&&n.scrollIntoView({block:"nearest",behavior:"smooth"});}return;}
+  const w=e.target.closest("[data-ws]");if(w){b.ws=w.dataset.ws;b.off=[];persist();renderCats();renderList();return;}
+  const s=e.target.closest("[data-svc]");if(s){const id=s.dataset.svc;b.off=b.off.includes(id)?b.off.filter(x=>x!==id):b.off.concat(id);persist();renderList();return;}
+  if(e.target.closest("[data-pitch]")){try{await navigator.clipboard.writeText(pitch(b));toast("Mensaje copiado ✍️");}catch(err){toast("No se pudo copiar");}}
+});
+function focusBiz(id){
+  ui.open=id;if(!filtered().some(b=>b.id===id)){ui.cat="all";renderCats();}renderList();
+  const n=document.getElementById("c_"+id);if(n){n.scrollIntoView({behavior:"smooth",block:"center"});n.classList.add("flash");setTimeout(()=>n.classList.remove("flash"),1400);}}
+$("#map").addEventListener("click",e=>{const p=e.target.closest("[data-pin]");if(!p)return;focusBiz(p.getAttribute("data-pin"));});
+
+$("#btnAdd").addEventListener("click",()=>{$("#addCat").innerHTML=Object.keys(CATS).map(k=>`<option value="${k}">${CATS[k].n}</option>`).join("");show("#ovAdd");});
+$("#addForm").addEventListener("submit",e=>{e.preventDefault();const f=new FormData(e.target);
+  if(isDemo||!city){city=city&&!isDemo?city:($("#cityInput").value.trim()||"Mi ciudad");if(isDemo){list=[];isDemo=false;}}
+  const b=mkBiz({name:f.get("name").trim(),cat:f.get("cat"),phone:f.get("phone"),web:f.get("web"),ws:f.get("ws")});
+  list.push(b);ui.open=b.id;persist();e.target.reset();hide("#ovAdd");renderAll();toast("Añadido a "+city);
+  setTimeout(()=>{const n=document.getElementById("c_"+b.id);n&&n.scrollIntoView({behavior:"smooth",block:"center"});},50);});
+
+$("#btnPrices").addEventListener("click",()=>{renderPrices();show("#ovPrices");});
+$("#priceRows").addEventListener("input",e=>{const i=e.target.closest("[data-p]");if(!i)return;const v=Math.max(0,parseInt(i.value.replace(/\D/g,""),10)||0);
+  SVC[i.dataset.p][i.dataset.f]=v;store.prices=store.prices||{};store.prices[i.dataset.p]=Object.assign({},store.prices[i.dataset.p],{[i.dataset.f]:v});save();renderList();});
+$("#resetPrices").addEventListener("click",()=>{SVC=JSON.parse(JSON.stringify(DEFAULT_SVC));store.prices=null;save();renderPrices();renderList();toast("Precios de mercado restaurados");});
+window.addEventListener("resize",()=>renderMap(filtered()));
+
+/* ---------- arranque ---------- */
+if(store.current&&store.cities[store.current]){city=store.current;list=store.cities[city].list.map(mkBiz);$("#cityInput").value=city;}
+else{city="Guadalajara (ejemplo)";list=demo();isDemo=true;}
+renderAll();
+})();
+</script>
+</body>
+</html>
